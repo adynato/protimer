@@ -1,0 +1,47 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "ProTimer",
+  "version": "0.1.0",
+  "identifier": "com.adynato.protimer",
+  "build": {
+    "frontendDist": "../ui/dist",
+    "devUrl": "http://localhost:5180",
+    "beforeDevCommand": "bun run --cwd ui dev",
+    "beforeBuildCommand": "bun run --cwd ui build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "ProTimer",
+        "width": 360,
+        "height": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "macOS": {
+      "entitlements": "entitlements.plist",
+      "minimumSystemVersion": "10.15",
+      "signingIdentity": "Developer ID Application: ADYNATO LLC (AWF922UBB3)",
+      "hardenedRuntime": true
+    },
+    "category": "public.app-category.productivity",
+    "shortDescription": "Time tracking for hourly engineers",
+    "longDescription": "ProTimer automatically tracks your billable hours when Claude Code is working on your projects. Set hourly rates, manage multiple clients, and generate weekly invoices."
+  }
+}

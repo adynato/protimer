@@ -1,0 +1,16 @@
+{
+  "name": "protimer",
+  "private": true,
+  "packageManager": "bun@1.1.42",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "typecheck": "turbo typecheck"
+  },
+  "devDependencies": {
+    "turbo": "^2"
+  }
+}
