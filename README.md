@@ -35,9 +35,10 @@ Ideas for forks and extensions:
 ```bash
 # Install dependencies
 bun install
+cd packages/app/ui && bun install && cd ../../../
 
 # Run the desktop app
-bun run dev --filter=@protimer/app
+bun run dev
 ```
 
 ## Data Storage
