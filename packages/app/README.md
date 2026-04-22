@@ -7,7 +7,6 @@ Standalone Mac desktop app for tracking Claude Code work time. Built with Tauri 
 - **Auto-tracking** - Starts/stops when Claude Code is working (via hooks)
 - **Manual mode** - Track admin work with play/pause
 - **Weekly invoices** - Export billable hours by project
-- **Idle detection** - Prompts after 5 minutes of inactivity
 
 ## Development
 

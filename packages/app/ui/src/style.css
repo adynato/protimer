@@ -441,7 +441,7 @@ main {
   font-family: "SF Mono", Monaco, monospace;
 }
 
-/* Idle Dialog */
+/* Confirm Dialog */
 .confirm-dialog-overlay {
   position: fixed;
   top: 0;
@@ -601,100 +601,6 @@ main {
   font-style: italic;
 }
 
-.idle-dialog-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.idle-dialog {
-  background: white;
-  border-radius: 12px;
-  padding: 1.5rem;
-  max-width: 300px;
-  text-align: center;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-}
-
-.idle-dialog h2 {
-  font-size: 1.1rem;
-  margin-bottom: 0.75rem;
-  color: #1a1a1a;
-}
-
-.idle-dialog p {
-  font-size: 0.85rem;
-  color: #4a4a4a;
-  margin-bottom: 0.5rem;
-}
-
-.idle-dialog .idle-projects {
-  font-size: 0.75rem;
-  color: #6c757d;
-  margin-bottom: 1rem;
-}
-
-.idle-options {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-  text-align: left;
-}
-
-.idle-option {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-
-.idle-option input[type="radio"] {
-  margin: 0;
-}
-
-.idle-buttons {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.idle-btn-continue {
-  flex: 1;
-  background: #2c2c2c;
-  color: white;
-  padding: 0.5rem;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.8rem;
-}
-
-.idle-btn-continue:hover {
-  background: #404040;
-}
-
-.idle-btn-stop {
-  flex: 1;
-  background: #dc3545;
-  color: white;
-  padding: 0.5rem;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.8rem;
-}
-
-.idle-btn-stop:hover {
-  background: #c82333;
-}
 
 /* Activity Modal */
 .activity-modal-overlay {
@@ -1522,21 +1428,6 @@ main {
     color: #6c757d;
   }
 
-  .idle-dialog {
-    background: #2a2a2a;
-  }
-
-  .idle-dialog h2 {
-    color: #e9ecef;
-  }
-
-  .idle-dialog p {
-    color: #adb5bd;
-  }
-
-  .idle-option {
-    color: #e9ecef;
-  }
 
   .activity-modal {
     background: #2a2a2a;

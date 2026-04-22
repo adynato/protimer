@@ -1,19 +1,14 @@
 import "./style.css";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { listen } from "@tauri-apps/api/event";
 
-const IDLE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
-
 // Cleanup tracking for memory leak prevention
 let fetchDataIntervalId: number | null = null;
-let checkIdleIntervalId: number | null = null;
 let rafId: number | null = null;
 let isAppRunning = true;
 
-let idleDialogOpen = false;
 let currentStatus: Status | null = null;
 let knownProjectIds: Set<string> = new Set();
 let localManualMode: Map<string, { active: boolean; startTime: number }> = new Map();
@@ -49,7 +44,6 @@ interface Status {
   projects: Project[];
   todayTotal: number;
   claudeTotal: number;
-  systemIdleTime: number;
 }
 
 interface TimeEntry {
@@ -97,8 +91,8 @@ async function startTracking(projectId: string): Promise<void> {
   await invoke("start_tracking", { projectId, manualMode: true });
 }
 
-async function stopTracking(projectId: string, endTime?: number): Promise<void> {
-  await invoke("stop_tracking", { projectId, endTime: endTime ?? null });
+async function stopTracking(projectId: string): Promise<void> {
+  await invoke("stop_tracking", { projectId });
 }
 
 async function deleteProject(projectId: string): Promise<void> {
@@ -161,10 +155,6 @@ async function checkHooksInstalled(): Promise<HooksStatus> {
 
 async function installHooks(): Promise<HooksStatus> {
   return invoke("install_hooks");
-}
-
-function generateUUID(): string {
-  return crypto.randomUUID();
 }
 
 // Create a project card element
@@ -1432,88 +1422,6 @@ function showInvoiceDialog(project: Project): void {
   });
 }
 
-function showIdleDialog(idleTime: number, trackingProjects: Project[]): void {
-  idleDialogOpen = true;
-  const idleTimeFormatted = formatDuration(idleTime);
-  const projectNames = trackingProjects.map(p => p.name).join(", ");
-
-  const dialog = document.createElement("div");
-  dialog.className = "idle-dialog-overlay";
-  dialog.innerHTML = `
-    <div class="idle-dialog">
-      <h2>Idle Detected</h2>
-      <p>You've been idle for <strong>${idleTimeFormatted}</strong></p>
-      <p class="idle-projects">Active timers: ${projectNames}</p>
-      <div class="idle-options">
-        <label class="idle-option">
-          <input type="radio" name="idle-action" value="keep">
-          <span>Keep idle time</span>
-        </label>
-        <label class="idle-option">
-          <input type="radio" name="idle-action" value="discard" checked>
-          <span>Discard idle time</span>
-        </label>
-      </div>
-      <div class="idle-buttons">
-        <button class="btn idle-btn-continue">Continue</button>
-        <button class="btn idle-btn-stop">Stop All</button>
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(dialog);
-
-  dialog.querySelector(".idle-btn-continue")?.addEventListener("click", () => {
-    idleDialogOpen = false;
-    dialog.remove();
-  });
-
-  dialog.querySelector(".idle-btn-stop")?.addEventListener("click", () => {
-    const discardIdle = (dialog.querySelector('input[name="idle-action"]:checked') as HTMLInputElement)?.value === "discard";
-    const stopTrackingPromises: Promise<void>[] = [];
-
-    for (const project of trackingProjects) {
-      // Update local state immediately for instant UI
-      localManualMode.set(project.id, { active: false, startTime: 0 });
-      // Background sync to backend
-      if (discardIdle) {
-        const idleStartTime = Date.now() - idleTime;
-        stopTrackingPromises.push(stopTracking(project.id, idleStartTime));
-      } else {
-        stopTrackingPromises.push(stopTracking(project.id));
-      }
-    }
-
-    // Wait for all stops to complete, then refresh totals
-    Promise.all(stopTrackingPromises).then(() => fetchData());
-
-    // Update UI immediately from local state
-    if (currentStatus) {
-      for (const project of trackingProjects) {
-        const p = currentStatus.projects.find(proj => proj.id === project.id);
-        if (p) {
-          p.manualMode = false;
-          p.isTracking = p.claudeState === "active";
-          updateProjectCard(p);
-        }
-      }
-    }
-
-    idleDialogOpen = false;
-    dialog.remove();
-  });
-}
-
-function checkIdle(): void {
-  if (!currentStatus || idleDialogOpen) return;
-
-  const trackingProjects = currentStatus.projects.filter(p => p.isTracking);
-  if (trackingProjects.length === 0) return;
-
-  if (currentStatus.systemIdleTime >= IDLE_THRESHOLD_MS) {
-    showIdleDialog(currentStatus.systemIdleTime, trackingProjects);
-  }
-}
 
 // Cleanup function for window unload
 function cleanup(): void {
@@ -1521,10 +1429,6 @@ function cleanup(): void {
   if (fetchDataIntervalId !== null) {
     clearInterval(fetchDataIntervalId);
     fetchDataIntervalId = null;
-  }
-  if (checkIdleIntervalId !== null) {
-    clearInterval(checkIdleIntervalId);
-    checkIdleIntervalId = null;
   }
   if (rafId !== null) {
     cancelAnimationFrame(rafId);
@@ -1548,8 +1452,6 @@ fetchDataIntervalId = window.setInterval(fetchData, 5000);
 // Render timers at 60fps (updates DOM once per second)
 rafId = requestAnimationFrame(renderTimers);
 
-// Check for idle
-checkIdleIntervalId = window.setInterval(checkIdle, 10000);
 
 // Cleanup on window unload to prevent memory leaks
 window.addEventListener("beforeunload", cleanup);

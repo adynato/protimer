@@ -13,12 +13,10 @@ use std::sync::mpsc::channel;
 
 mod invoice;
 
-// Cache for activity log and system idle time
+// Cache for activity log
 struct ActivityCache {
     entries: Arc<Vec<ActivityEntry>>,
     file_modified: Option<SystemTime>,
-    system_idle_time: i64,
-    system_idle_checked: i64,
 }
 
 // Database connection wrapped in Mutex for thread safety
@@ -89,7 +87,6 @@ pub struct Status {
     pub projects: Vec<ProjectStatus>,
     pub today_total: i64,
     pub claude_total: i64,
-    pub system_idle_time: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -360,34 +357,6 @@ fn get_claude_sessions_for_project_cached(
         .collect()
 }
 
-// Get system idle time (macOS) - actual implementation
-fn do_get_system_idle_time() -> i64 {
-    if let Ok(output) = Command::new("ioreg")
-        .args(["-c", "IOHIDSystem"])
-        .output()
-    {
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        for line in stdout.lines() {
-            if line.contains("HIDIdleTime") {
-                if let Some(val) = line.split('=').nth(1) {
-                    if let Ok(ns) = val.trim().parse::<i64>() {
-                        return ns / 1_000_000; // Convert ns to ms
-                    }
-                }
-            }
-        }
-    }
-    0
-}
-
-// Refresh system idle time cache (every 5 seconds)
-fn refresh_system_idle_cache(cache: &mut ActivityCache) {
-    let now = now_ms();
-    if now - cache.system_idle_checked > 5000 {
-        cache.system_idle_time = do_get_system_idle_time();
-        cache.system_idle_checked = now;
-    }
-}
 
 // Get start of today in milliseconds
 fn get_today_start_ms() -> i64 {
@@ -719,7 +688,7 @@ fn start_tracking(project_id: String, manual_mode: bool, state: State<AppState>)
 }
 
 #[tauri::command]
-fn stop_tracking(project_id: String, end_time: Option<i64>, state: State<AppState>) -> Result<Option<TimeEntry>, String> {
+fn stop_tracking(project_id: String, state: State<AppState>) -> Result<Option<TimeEntry>, String> {
     let conn = state.db.lock().map_err(|e| e.to_string())?;
 
     // Get active session
@@ -744,7 +713,7 @@ fn stop_tracking(project_id: String, end_time: Option<i64>, state: State<AppStat
         None => return Ok(None),
     };
 
-    let actual_end_time = end_time.unwrap_or_else(now_ms);
+    let actual_end_time = now_ms();
 
     let entry = TimeEntry {
         id: generate_id(),
@@ -769,17 +738,10 @@ fn stop_tracking(project_id: String, end_time: Option<i64>, state: State<AppStat
 
 #[tauri::command]
 fn get_status(state: State<AppState>) -> Result<Status, String> {
-    // Refresh caches (before locking db to avoid deadlock)
-    {
+    let cached_entries = {
         let mut cache = state.cache.lock().map_err(|e| e.to_string())?;
         refresh_activity_cache(&mut cache);
-        refresh_system_idle_cache(&mut cache);
-    }
-
-    // Clone cached data for use in the loop (Arc clone is cheap - just ref count)
-    let (cached_entries, cached_idle_time) = {
-        let cache = state.cache.lock().map_err(|e| e.to_string())?;
-        (Arc::clone(&cache.entries), cache.system_idle_time)
+        Arc::clone(&cache.entries)
     };
 
     let conn = state.db.lock().map_err(|e| e.to_string())?;
@@ -958,13 +920,10 @@ fn get_status(state: State<AppState>) -> Result<Status, String> {
         });
     }
 
-    let system_idle_time = cached_idle_time;
-
     Ok(Status {
         projects: project_statuses,
         today_total,
         claude_total,
-        system_idle_time,
     })
 }
 
@@ -1400,8 +1359,6 @@ pub fn run() {
         cache: Mutex::new(ActivityCache {
             entries: Arc::new(Vec::new()),
             file_modified: None,
-            system_idle_time: 0,
-            system_idle_checked: 0,
         }),
     };
 
